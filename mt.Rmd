@@ -1,0 +1,170 @@
+---
+title: "Transmission and Fuel Efficiency"
+author: "John James"
+date: "April 15, 2016"
+output:
+  html_document:
+    fig_caption: yes
+    keep_md: yes
+    theme: journal
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(gvlma)
+library(knitr)
+library(kfigr)
+library(printr)
+library(car)
+read_chunk("mt.R")
+knitr::opts_chunk$set(fig.path = "../figures/", fig.height = 4, fig.width = 10, echo=TRUE, warning=FALSE)
+```
+
+```{r environment, echo = FALSE, message = F, eval = T}
+<<environment>>
+```
+
+```{r data, echo = FALSE, message = F, eval = T}
+<<data>>
+```
+
+
+```{r model0, echo = FALSE, message = F, eval = T}
+<<model0>>
+```
+
+
+```{r corrOutcome, echo = FALSE, message = F, eval = T}
+<<corrOutcome>>
+```
+
+
+```{r corrPredictors, echo = FALSE, message = F, eval = T}
+<<corrPredictors>>
+```
+
+
+
+```{r modelSets, echo = FALSE, message = F, eval = T}
+<<modelSets>>
+```
+
+#Introduction
+
+#Data
+`r figr("mtStats", TRUE, type="Table")` presents the summary statistics for the continuous and categorical variables in the Motor Trend Cars dataframe.  There are `r mtStats[5,1]` observations of 11 variables.  Miles per gallon range from `r mtStats[3,1]` to `r mtStats[4,1]`.
+
+
+#Methods
+A univariate analysis was undertaken to establish the strength of the correlation between transmission type (am) and fuel efficiency, measured in miles per gallon (mpg).  Next, a multivariate regression analysis model selection process was undertaken whereby each variable was added to the univariate linear model, one-by-one, in order of correlation (`r figr("cordf1", TRUE, type="Table")`) with the dependent variable, mpg.  This series of nested models was evaluated using Anova tests and all models in which their additional variables had no significant effect on the mpg (p.value < 0.05) were discarded. Lastly, to obtain constant variance, variables highly correlated with transmission type were removed and replaced by predictors with high correlation with mpg and a relatively low correlation with transmission type.  
+
+
+#Analysis
+##Univariate Analysis
+A linear regression was calculated to predict mpg based on transmission type (variable named, am). The linear equation produced an adjusted R^2^ of `r round(summary(lm0)$adj.r.squared,3)` (F(`r summary(lm0)$fstatistic[2]`, `r summary(lm0)$fstatistic[3]`)=`r round(summary(lm0)$fstatistic[1],3)`, p < `r round(anova(lm0)$'Pr(>F)'[1],3)`).  The low R^2^ revealed a lack of fit with the model.  Further, correlation amongst the omitted variables and the dependent variable (`r figr("cordf1", TRUE, type="Table")`) was high, suggesting multicollinearity was a problem.      
+
+##Multivariate Analysis
+###Regression Model
+To isolate the effect of transmission type on fuel efficiency, a multiple linear regression was calculated to predict mpg, based upon transmission type (am), weight (wt), and horsepower(hp).  A significant regression equation was found (F(`r summary(lm12)$fstatistic[2]`, `r summary(lm12)$fstatistic[3]`)=`r round(summary(lm12)$fstatistic[1],3)`, p < `r round(anova(lm12)$'Pr(>F)'[1],3)`), with an adjusted R^2^ of `r round(summary(lm12)$adj.r.squared,3)`. Predicted mpg was equal to `r round(summary(lm12)$coef[1,1],3)`  + `r round(summary(lm12)$coef[2,1],3)` * (Transmission)  `r round(summary(lm12)$coef[3,1],3)` * (wt)  `r round(summary(lm12)$coef[4,1],3)` * (hp), where Transmission was coded as 0 = Auto, 1 = Manual, wt is the weight of the vehicle measured in 1000lb, and hp was gross horsepower. Miles per gallon increased by `r round(summary(lm12)$coef[2,1],3)` mpg for cars with manual transmissions, increased by `r round(summary(lm12)$coef[3,1],3)` mpg for each 1000 lb of weight, and increased by `r round(summary(lm12)$coef[4,1],3)` mpg for each unit of horsepower. Though weight and horsepower were significant predictors of mpg with p-values `r round(summary(lm12)$coef[3,4],3)` and `r round(summary(lm12)$coef[4,4],3)` respectively, transmission type was not.  The p-value for transmission type is `r round(summary(lm12)$coef[2,4],3)`, significantly above our significance factor of α = 0.05.
+
+###Regression Model Assessment
+The following assumptions hold for this model
+
+####Existence
+The relationship between dependent and independent variables exists.  The model predictors produce an adjusted R^2^ of `r round(summary(lm12)$adj.r.squared,3)`, thereby explaining `r 100 * round(summary(lm12)$adj.r.squared,3)` percent of the variability in mpg.
+
+####Linearity
+The partial residual plots shown in `r figr("lm12Linearity", TRUE, type="Figure")` illustrates the linear relationship between the predictors and the outcome (mpg) over the spectrum of values studied.  
+
+####Independence  
+    - For given values of explanatory variable x, the y-values are independent of each other
+    - The explanatory variables are independent of each other – hence the name “independent variables
+####Normality 
+For given values of the explanatory variables, the y-values are normally distributed
+####*Constant Variance
+The distribution  of y-values has equal variance at each value of x
+
+#Results
+
+#References
+
+#Appendix
+
+##Figures
+```{r lm12global, echo = FALSE, message = F, eval = F, anchor = "Figure", fig.height = 10}
+gvmodel <- gvlma(lm72)
+summary(gvmodel)
+vif(lm72)
+plot(gvmodel)
+```
+`r figr("lm12global", TRUE, type="Figure")`: Global Test of Model Assumptions
+
+
+```{r lm12Linearity, echo = FALSE, message = F, eval = T, anchor = "Figure", fig.height = 6}
+layout(matrix(c(1,2,3,4),2,2))
+crPlots(lm72)
+```
+`r figr("lm12Linearity", TRUE, type="Figure")`: Partial Residual Plots
+
+
+
+```{r plotlm12, echo = FALSE, message = F, eval = T, anchor = "Figure", fig.height = 10}
+layout(matrix(c(1:6),3,2))
+plot(lm72, which = 1:6)
+```
+`r figr("plotlm12", TRUE, type="Figure")`: Fit plots for Multiple Regression Model
+
+##Tables
+`r figr("mtStats", TRUE, type="Table")`: Summary Statistics for Motor Trend Cars Data Frame
+```{r mtStats, echo = FALSE, message = F, eval = T, tidy=TRUE, tidy.opts=list(comment=TRUE), anchor = "Table"}
+mtStats
+```
+
+`r figr("anovaSet3", TRUE, type="Table")`: Nested Anova Evaluation Model Set 3
+```{r anovaSet3, echo = FALSE, message = F, eval = T, tidy=TRUE, tidy.opts=list(comment=TRUE), anchor = "Table"}
+anova(lm1, lm21, lm22, lm23, lm24)
+```
+
+
+`r figr("anovaSet4", TRUE, type="Table")`: Nested Anova Evaluation Model Set 4
+```{r anovaSet4, echo = FALSE, message = F, eval = T, tidy=TRUE, tidy.opts=list(comment=TRUE), anchor = "Table"}
+anova(lm1, lm31, lm32, lm33, lm34, lm35, lm36, lm37, lm38, lm39)
+```
+
+`r figr("anovaSet5", TRUE, type="Table")`: Nested Anova Evaluation Model Set 5
+```{r anovaSet5, echo = FALSE, message = F, eval = T, tidy=TRUE, tidy.opts=list(comment=TRUE), anchor = "Table"}
+anova(lm1, lm41, lm42, lm43, lm44)
+```
+
+`r figr("anovaSet6", TRUE, type="Table")`: Nested Anova Evaluation Model Set 5
+```{r anovaSet6, echo = FALSE, message = F, eval = T, tidy=TRUE, tidy.opts=list(comment=TRUE), anchor = "Table"}
+anova(lm1, lm61, lm62, lm63, lm64, lm65, lm66, lm67, lm68, lm69)
+```
+
+
+`r figr("cordf1", TRUE, type="Table")`: MPG Correlation Table (Absolute Value)
+```{r cordf1, echo = FALSE, message = F, eval = T, tidy=TRUE, tidy.opts=list(comment=TRUE), anchor = "Table"}
+cordf1
+```
+
+`r figr("cordf2", TRUE, type="Table")`: Transmission Correlation Table (Absolute Value)
+```{r cordf2, echo = FALSE, message = F, eval = T, tidy=TRUE, tidy.opts=list(comment=TRUE), anchor = "Table"}
+cordf2
+```
+
+
+`r figr("linearModel", TRUE, type="Table")`: Multiple Regression Summary
+```{r linearModel, echo = FALSE, message = F, eval = T, tidy=TRUE, tidy.opts=list(comment=TRUE), anchor = "Table"}
+summary(lm42)
+```
+
+
+
+
+##Code
+```{r}
+anchors("index")
+```
