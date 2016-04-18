@@ -161,6 +161,50 @@ lm10p <- lmp(lm10)
 lm72p <- lmp(lm72)
 ## ---- end
 
+
+######################################################################################
+##                                  OUTLIERS                                        ##
+######################################################################################
+## ---- outliers
+lev     <- hatvalues(lm72)
+res     <- resid(lm72)
+outlev  <- mtcars[lev > 0.3,]
+outres  <- mtcars[res > 3.6,]
+outlevrn <- rownames(outlev)
+outresrn <- rownames(outres)
+
+dfblev  <- data.frame(round(dfbetas(lm72)[outlevrn,],3))
+dfbres  <- round(dfbetas(lm72)[outresrn,],3)
+
+cd      <- data.frame(cooks.distance(lm72))
+colnames(cd) <- c("cd")
+draw_rownames <- function(.data) .data %>% do(mutate(.,rownames=rownames(.)))
+cd      <- cd %>% draw_rownames() 
+cd      <- arrange(cd, desc(cd))
+
+mtcars2  <- mtcars[!rownames(mtcars) %in% outlevrn,]
+mtcars3  <- mtcars[!rownames(mtcars) %in% outresrn,]
+
+lm72_2   <- lm(mpg ~ factor(am) + log(wt) + log(hp), data = mtcars2)
+lm72_3   <- lm(mpg ~ factor(am) + log(wt) + log(hp), data = mtcars3)
+print(summary(lm72_3))
+
+lm72r2   <- summary(lm72)$adj.r.squared
+lm72_2r2 <- summary(lm72_2)$adj.r.squared
+lm72_3r2 <- summary(lm72_3)$adj.r.squared
+
+pctchg2  <- round(100*((lm72_2r2 - lm72r2) / lm72r2),2)
+pctchg3  <- round(100*((lm72_3r2 - lm72r2) / lm72r2),2)
+
+oltblc   <- c("Dataset", "Adjusted R.Squared", "Pct Change")
+oltblds  <- c("Original Data Set", "High Leverage Points Removed (>0.3)", "High Residual Points Removed (>3.6)")
+oltblr2  <- c(lm72r2, lm72_2r2, lm72_3r2)
+oltblpc  <- c("NA", pctchg2, pctchg3)
+oltbl    <- data.frame(oltblds, oltblr2, oltblpc)
+colnames(oltbl) <- oltblc
+## ---- end
+
+
 ######################################################################################
 ##                                  BOOTSTRAP                                       ##
 ######################################################################################
@@ -177,5 +221,5 @@ mpgEst <- function(data, indices) {
   
 }
 
-results <- boot(data = mtcars, statistic = mpgEst, R = 5000)
-print(results)
+#results <- boot(data = mtcars, statistic = mpgEst, R = 5000)
+#print(results)

@@ -31,17 +31,13 @@ knitr::opts_chunk$set(fig.path = "../figures/", fig.height = 4, fig.width = 10, 
 <<data>>
 ```
 
-
 ```{r corrOutcome, echo = FALSE, message = F, eval = T}
 <<corrOutcome>>
 ```
 
-
 ```{r corrPredictors, echo = FALSE, message = F, eval = T}
 <<corrPredictors>>
 ```
-
-
 
 ```{r modelSets, echo = FALSE, message = F, eval = T}
 <<modelSets>>
@@ -55,12 +51,16 @@ knitr::opts_chunk$set(fig.path = "../figures/", fig.height = 4, fig.width = 10, 
 <<plots>>
 ```
 
+```{r outliers, echo = FALSE, message = F, eval = T}
+<<outliers>>
+```
+
 #Introduction
 The purpose of this analysis was to explore 1974 Motor Trend Magazine fuel consumption data set to determine whether an automatic or manual transmission was better for MPG and to quantify the difference.
 
 Multiple linear regression techniques were used to isolate the effect of transmission type and to separate the effects of confounding variables on mpg. The following regression equation best fit the data and met the basis assumptions of linear regression analysis.
 $$Y_i = \beta_0 + \beta_1am_i + \beta_2log(wt_i) + \beta_3log(hp_i) + \epsilon_i$$
-The analysis posits that transmission type has no statistically significant effect on fuel efficiency when other factors such as weight and horsepower were taken into consideration.
+This analysis posits that transmission type has no statistically significant effect on fuel efficiency when other factors such as weight and horsepower were taken into consideration.
 
 #Data
 There were `r mtStats[5,1]` observations of 11 variables in the Motor Trend Cars dataset, 6 continuous, 5 categorical. `r figr("carsFormat", TRUE, type="Table")` outlines the structure of the dataset.  `r figr("mtStats", TRUE, type="Table")` presents the summary statistics for the continuous variables.  Miles per gallon ranged from `r mtStats[3,1]` to `r mtStats[4,1]`, with a mean of `r round(mtStats[1,1],2)` mpg. Weight, measured in 1000 lb, ranged from `r round(1000 * mtStats[3,5],2)` to `r round(1000 * mtStats[4,5],2)` lb, with a mean of `r round(1000 * mtStats[1,5],2)` lb.  Mean horsepower and displacement was `r round(mtStats[1,3],2)` and `r round(mtStats[1,2],2)` cubic inches, respectively.  
@@ -97,10 +97,16 @@ A significant regression equation was found (F(`r summary(lm72)$fstatistic[2]`, 
 The linear regression basic assumptions hold for this model.
 
 * *Existence:* The relationship between dependent and independent variables exists.  The model predictors produce an adjusted R^2^ of `r round(summary(lm72)$adj.r.squared,3)`, thereby explaining `r 100 * round(summary(lm72)$adj.r.squared,3)` percent of the variability in mpg.
-* *Linearity:* The Residual vs Fitted plot shown in `r figr("plotlm72", TRUE, type="Figure")` illustrate the linear relationship between the predictors and the outcome (mpg) over the spectrum of values studied.  
-* *Normality:* The Normal Q-Q plot in `r figr("plotlm72", TRUE, type="Figure")` evinces a normal distribution of y-values for the  given values of the explanatory variables.
-* *Constant Variance:*  The Residuals vs Fitted plot in `r figr("plotlm72", TRUE, type="Figure")` evinces a constant variance over the given values of the explanatory variables.
+* *Linearity:* The Residual vs Fitted plot shown in `r figr("plotlm72", TRUE, type="Figure")` evinces no distinct pattern among the residuals over the spectrum of values studied.  As such, the assumption of linearity holds for this model.
+* *Normality:* The Normal Q-Q plot in `r figr("plotlm72", TRUE, type="Figure")` indicates that distribution of standardized residuals approximates that of a sample of independent normals.  Therefore, the assumption of normality is valid for this model.
+* *Constant Variance:*  The Scale-Location plot in `r figr("plotlm72", TRUE, type="Figure")` shows a horizontal line with the square root of standardized residuals dispersed evenly about the line.  The assumption of constant variance over the given values of the explanatory variables, is supported.
 
+**Regression Model Assessment**
+
+* *Outliers:* The `r cd[1,2]`, `r cd[2,2]`, `r cd[3,2]`, and `r cd[4,2]` had the highest influence on the regression model with cook's distances of `r round(cd[1,1],3)`, `r round(cd[2,1],3)`, `r round(cd[3,1],3)`, and `r round(cd[4,1],3)`, respectively.  All points were lower than the cut-off value of $D_i > 1$.
+
+Lotus Europe observation was the highest **leverage** point at roughly `r max(lev)`.
+The Chrysler Imperial, Fiat 128, and Toyota Corolla wereand Lotus Europa were four potential outliers observed. However, the Residuals vs. Leverage in `r figr("plotlm72", TRUE, type="Figure")` reveals that these points are well within the Cook's distance and; therefore, exert minimal influence. 
 
 #References
 1. Green, S. B. (1991). How many subjects does it take to do a regression analysis? Multivariate Behavioral Research, 26,499‐510.
