@@ -5,6 +5,7 @@
 # mt.R
 
 ## ---- environment
+library(boot)
 library(car)
 library(dplyr)
 library(GGally)
@@ -13,7 +14,6 @@ library(grid)
 library(gridExtra)
 library(pastecs)
 library(RColorBrewer)
-library(relaimpo)
 data("mtcars")
 
 ## ---- end
@@ -22,39 +22,38 @@ data("mtcars")
 ##                                        DATA                                      ##
 ######################################################################################
 ## ---- data
-cars <- mtcars
-mtStats <- lapply( cars , function(x) rbind( mean = mean(x) ,
+cars <- mtcars[c("mpg", "disp", "hp", "drat", "wt", "qsec")]
+mtStats <- lapply(cars, function(x) rbind( mean = mean(x) ,
                                          median = median(x) ,
                                          minimum = min(x) ,
                                          maximum = max(x) ,
                                          s.size = length(x) ) )
 mtStats <- data.frame(mtStats)
 
-## Create Transmission Categorical Variable
-cars$Transmission[cars$am == 0] <- "Automatic"
-cars$Transmission[cars$am == 1] <- "Manual"
+cars$cyl  <- as.factor(mtcars$cyl)
+cars$vs   <- as.factor(mtcars$vs)
+cars$am   <- as.factor(mtcars$am)
+cars$gear <- as.factor(mtcars$gear)
+cars$carb <- as.factor(mtcars$carb)
 
-## Boxplot of MPG versus transmission
-mpgByTran <- ggplot(data = cars, aes(x = Transmission, y = mpg)) + 
-  geom_boxplot(aes(fill=Transmission)) +
-  ylab("MPG") +
-  xlab("Transmission") +
-  theme_bw() +
-  ggtitle("MPG by Transmission") +
-  scale_fill_brewer(name = "Transmission", palette = "Dark2") 
-
+label <- c("Miles per Gallon", "Cylinders", "Displacement", "Horsepower", 
+                      "Rear Axle Ratio", "Weight", "Qtr Mile Time", "Engine Type", "Transmission Type", 
+                      "Forward Gears", "Carburetors")
+type <-  c("Continuous", "Categorical", "Continuous", "Continuous",
+                      "Continuous", "Continuous", "Continuous", "Categorical", "Categorical",
+                      "Categorical", "Categorical")
+variable <- c("mpg", "cyl", "disp", "hp", "drat", "wt", "qsec", "vs", "am", "gear", "carb")
+desc <- c("Miles (US) / Gallon", "Number of Cylinders (4, 6, or 8)", "Displacement (cu. in.)", "Gross Horsepower",
+                     "Rear Axle Ratio", "Weight (1000 lb)", "1/4 Mile Time (sec.)", "V/Straight Engine (0 = V, 1 = Straight)", 
+                     "Transmission (0 = automatic, 1 = manual)", "Number of Forward Gears (3,4, or 5)", 
+                     "Number of Carburetors (1,2,3,4,6 or 8)")
+carsFormat <- data.frame(label, type, variable, desc)
 ## ---- end
 
 
 ######################################################################################
 ##                              DATA ANALYSIS                                       ##
 ######################################################################################
-## ---- model0
-lm0   <- lm(mpg ~ Transmission,  data = cars)
-lm0s  <- summary(lm0)
-lm0t  <- t.test(mpg ~ Transmission, data = cars)
-## ---- end
-
 
 ## ---- corrOutcome
 corcyl  <- abs(cor(mtcars$mpg, mtcars$cyl))
@@ -86,20 +85,21 @@ corcarb <- abs(cor(mtcars$am, mtcars$carb))
 
 cordf2 <- data.frame(Variable = c("Cylinders", "Displacement", "HP", "Rear Axle Ratio", "Weight", "Qtr Mile", "VS", "Gears", "Carburetors"),
                      Correlation = c(corcyl, cordisp, corhp, cordrat, corwt, corqsec, corvs, corgear, corcarb))
-cordf2 <- arrange(cordf2, Correlation)
+cordf2 <- arrange(cordf2, desc(Correlation))
 ## ---- end
+
 
 ## ---- modelSets
 lm1   <- lm(mpg ~ factor(am), data = mtcars)
 lm2   <- update(lm1, mpg ~ factor(am) + wt)
-lm3   <- update(lm2, mpg ~ factor(am) + wt + cyl)
-lm4   <- update(lm3, mpg ~ factor(am) + wt + cyl + disp)
-lm5   <- update(lm4, mpg ~ factor(am) + wt + cyl + disp + hp)
-lm6   <- update(lm5, mpg ~ factor(am) + wt + cyl + disp + hp + drat)
-lm7   <- update(lm6, mpg ~ factor(am) + wt + cyl + disp + hp + drat + vs)
-lm8   <- update(lm7, mpg ~ factor(am) + wt + cyl + disp + hp + drat + vs + carb)
-lm9   <- update(lm8, mpg ~ factor(am) + wt + cyl + disp + hp + drat + vs + carb + gear)
-lm10  <- update(lm9, mpg ~ factor(am) + wt + cyl + disp + hp + drat + vs + carb + gear + qsec)
+lm3   <- update(lm2, mpg ~ factor(am) + wt + factor(cyl))
+lm4   <- update(lm3, mpg ~ factor(am) + wt + factor(cyl) + disp)
+lm5   <- update(lm4, mpg ~ factor(am) + wt + factor(cyl) + disp + hp)
+lm6   <- update(lm5, mpg ~ factor(am) + wt + factor(cyl) + disp + hp + drat)
+lm7   <- update(lm6, mpg ~ factor(am) + wt + factor(cyl) + disp + hp + drat + factor(vs)) 
+lm8   <- update(lm7, mpg ~ factor(am) + wt + factor(cyl) + disp + hp + drat + factor(vs) + factor(carb))
+lm9   <- update(lm8, mpg ~ factor(am) + wt + factor(cyl) + disp + hp + drat + factor(vs) + factor(carb) + factor(gear))
+lm10  <- update(lm9, mpg ~ factor(am) + wt + factor(cyl) + disp + hp + drat + factor(vs) + factor(carb) + factor(gear) + qsec)
 
 lm11   <- update(lm1,  mpg ~ factor(am) + wt)
 lm12   <- update(lm11, mpg ~ factor(am) + wt + hp)
@@ -139,5 +139,43 @@ lm69   <- update(lm68, mpg ~ factor(am) + log(wt) + factor(cyl) + disp + hp + dr
 lm71   <- update(lm1, mpg ~  factor(am) + log(wt))
 lm72   <- update(lm71, mpg ~ factor(am) + log(wt) + log(hp))
 lm73   <- update(lm72, mpg ~ factor(am) + log(wt) + log(hp) + factor(cyl))
-
+lm74   <- update(lm73, mpg ~ factor(am) + log(wt) + log(hp) + factor(cyl) + disp)
 ## ---- end
+
+## ---- plots
+carsVars <- mtcars[c("mpg", "am", "disp", "hp", "cyl", "wt")]
+sp1 <- ggpairs(carsVars)
+## ---- end
+
+## ---- getPvalue
+lmp <- function (modelobject) {
+  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+  f <- summary(modelobject)$fstatistic
+  p <- pf(f[1],f[2],f[3],lower.tail=F)
+  attributes(p) <- NULL
+  return(p)
+}
+
+lm1p  <- lmp(lm1)
+lm10p <- lmp(lm10)
+lm72p <- lmp(lm72)
+## ---- end
+
+######################################################################################
+##                                  BOOTSTRAP                                       ##
+######################################################################################
+mpgEst <- function(data, indices) {
+  d       = data[indices, ]
+  lm3r2   = summary(lm3)$adj.r.squared
+  lm12r2  = summary(lm12)$adj.r.squared
+  lm22r2  = summary(lm22)$adj.r.squared
+  lm23r2  = summary(lm23)$adj.r.squared
+  lm72r2  = summary(lm72)$adj.r.squared
+  lm73r2  = summary(lm73)$adj.r.squared
+  r2      = c(lm3r2, lm12r2, lm22r2, lm23r2, lm72r2, lm73r2)
+  return(r2)
+  
+}
+
+results <- boot(data = mtcars, statistic = mpgEst, R = 5000)
+print(results)
