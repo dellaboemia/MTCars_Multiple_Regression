@@ -138,13 +138,19 @@ lm69   <- update(lm68, mpg ~ factor(am) + log(wt) + factor(cyl) + disp + hp + dr
 
 lm71   <- update(lm1, mpg ~  factor(am) + log(wt))
 lm72   <- update(lm71, mpg ~ factor(am) + log(wt) + log(hp))
-lm73   <- update(lm72, mpg ~ factor(am) + log(wt) + log(hp) + factor(cyl))
-lm74   <- update(lm73, mpg ~ factor(am) + log(wt) + log(hp) + factor(cyl) + disp)
+lm73   <- update(lm72, mpg ~ factor(am) + log(wt) + log(hp) + drat)
+lm74   <- update(lm73, mpg ~ factor(am) + log(wt) + log(hp) + drat + vs)
+lm75   <- update(lm74, mpg ~ factor(am) + log(wt) + log(hp) + drat + vs + carb)
+lm76   <- update(lm75, mpg ~ factor(am) + log(wt) + log(hp) + drat + vs + carb + gear)
+lm77   <- update(lm76, mpg ~ factor(am) + log(wt) + log(hp) + drat + vs + carb + gear + qsec)
 ## ---- end
 
 ## ---- plots
 carsVars <- mtcars[c("mpg", "am", "disp", "hp", "cyl", "wt")]
 sp1 <- ggpairs(carsVars)
+
+carsVars2 <- mtcars[c("am", "wt", "hp")]
+sp2 <- ggpairs(carsVars2)
 ## ---- end
 
 ## ---- getPvalue
@@ -166,48 +172,37 @@ lm72p <- lmp(lm72)
 ##                                  OUTLIERS                                        ##
 ######################################################################################
 ## ---- outliers
-lev     <- hatvalues(lm72)
-res     <- resid(lm72)
-outlev  <- mtcars[lev > 0.3,]
-outres  <- mtcars[res > 3.6,]
-outlevrn <- rownames(outlev)
-outresrn <- rownames(outres)
-
-dfblev  <- data.frame(round(dfbetas(lm72)[outlevrn,],3))
-dfbres  <- round(dfbetas(lm72)[outresrn,],3)
-
 cd      <- data.frame(cooks.distance(lm72))
 colnames(cd) <- c("cd")
 draw_rownames <- function(.data) .data %>% do(mutate(.,rownames=rownames(.)))
 cd      <- cd %>% draw_rownames() 
 cd      <- arrange(cd, desc(cd))
 
-mtcars2  <- mtcars[!rownames(mtcars) %in% outlevrn,]
-mtcars3  <- mtcars[!rownames(mtcars) %in% outresrn,]
+topInfl  <- cd[1:4,2]
+mtcars2  <- mtcars[!rownames(mtcars) %in% topInfl,]
 
 lm72_2   <- lm(mpg ~ factor(am) + log(wt) + log(hp), data = mtcars2)
-lm72_3   <- lm(mpg ~ factor(am) + log(wt) + log(hp), data = mtcars3)
-print(summary(lm72_3))
 
 lm72r2   <- summary(lm72)$adj.r.squared
 lm72_2r2 <- summary(lm72_2)$adj.r.squared
-lm72_3r2 <- summary(lm72_3)$adj.r.squared
+pctchg   <- round(100*((lm72_2r2 - lm72r2) / lm72r2),2)
+pctrem   <- round(100*((lm72_2r2 - lm72r2) / (1-lm72r2)),2)
+## ---- end
 
-pctchg2  <- round(100*((lm72_2r2 - lm72r2) / lm72r2),2)
-pctchg3  <- round(100*((lm72_3r2 - lm72r2) / lm72r2),2)
 
-oltblc   <- c("Dataset", "Adjusted R.Squared", "Pct Change")
-oltblds  <- c("Original Data Set", "High Leverage Points Removed (>0.3)", "High Residual Points Removed (>3.6)")
-oltblr2  <- c(lm72r2, lm72_2r2, lm72_3r2)
-oltblpc  <- c("NA", pctchg2, pctchg3)
-oltbl    <- data.frame(oltblds, oltblr2, oltblpc)
-colnames(oltbl) <- oltblc
+######################################################################################
+##                                  COLLINEARITY                                    ##
+######################################################################################
+## ---- collinearity
+viflm10 <- vif(lm10)
+viflm72 <- vif(lm72)
 ## ---- end
 
 
 ######################################################################################
 ##                                  BOOTSTRAP                                       ##
 ######################################################################################
+## ---- bootstrap
 mpgEst <- function(data, indices) {
   d       = data[indices, ]
   lm3r2   = summary(lm3)$adj.r.squared
@@ -218,8 +213,39 @@ mpgEst <- function(data, indices) {
   lm73r2  = summary(lm73)$adj.r.squared
   r2      = c(lm3r2, lm12r2, lm22r2, lm23r2, lm72r2, lm73r2)
   return(r2)
-  
 }
 
-#results <- boot(data = mtcars, statistic = mpgEst, R = 5000)
-#print(results)
+bs <- function(formula, data, indices) {
+  d <- data[indices,] # allows boot to select sample 
+  fit <- lm(formula, data=d)
+  return(coef(fit)) 
+}
+
+results <- boot(data=mtcars, statistic=bs, 
+                R=1000, formula=mpg ~ factor(am) + log(wt) + log(hp))
+
+b0    <- results$t0[1]
+b1    <- results$t0[2]
+b2    <- results$t0[3]
+b3    <- results$t0[4]
+borig <- c(b0, b1, b2, b3)
+
+bse  <- apply(results$t, 2, sd)
+
+
+b0lci <- boot.ci(results, type="bca", index=1)$bca[4]
+b0uci <- boot.ci(results, type="bca", index=1)$bca[5]
+b1lci <- boot.ci(results, type="bca", index=2)$bca[4]
+b1uci <- boot.ci(results, type="bca", index=2)$bca[5]
+b2lci <- boot.ci(results, type="bca", index=3)$bca[4]
+b2uci <- boot.ci(results, type="bca", index=3)$bca[5]
+b3lci <- boot.ci(results, type="bca", index=4)$bca[4]
+b3uci <- boot.ci(results, type="bca", index=4)$bca[5]
+
+blci  <- c(b0lci, b1lci, b2lci, b3lci)
+buci  <- c(b0uci, b1uci, b2uci, b3uci)
+
+
+bsum <- data.frame(borig, bse, blci, buci)
+colnames(bsum) <- c("Orig", "Std Err", "95% Lower CI", "95% Upper CI")
+## ---- end
